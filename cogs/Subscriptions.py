@@ -17,6 +17,7 @@ class Subscription(commands.Cog):
         print('Subscriptions activated.')
 
     @commands.command(aliases=['cSub'])
+    @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def createSubscription(self, ctx, sub_name):
         # TODO: error check file opening
@@ -38,6 +39,7 @@ class Subscription(commands.Cog):
 
 
     @commands.command(aliases=['rSub'])
+    @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def removeSubscription(self, ctx, sub_name):
         # TODO: error check file opening
@@ -64,6 +66,26 @@ class Subscription(commands.Cog):
             sub_dict = json_file[server_id]
             if sub_name in sub_dict:
                 sub_dict[sub_name].append(str(ctx.author.id))
+            else:
+                await ctx.send(f'Subscription \'{sub_name}\' does not exist, call ,,create \'{sub_name}\' first.')
+        else:
+            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
+
+        self._writeToJson(json_file)
+        await ctx.send(f'Subscribed to \'{sub_name}\' successfully.')
+
+    @commands.command()
+    @discord.ext.commands.has_permissions(administrator=True)
+    @commands.guild_only()
+    async def subscribe_user(self, ctx, sub_name, *args):
+        # TODO: test
+        json_file = self._loadJsonFile()
+        server_id = str(ctx.guild.id)
+        if server_id in json_file:
+            sub_dict = json_file[server_id]
+            if sub_name in sub_dict:
+                for user in ctx.message.mentions:
+                    sub_dict[sub_name].append(str(user.id))
             else:
                 await ctx.send(f'Subscription \'{sub_name}\' does not exist, call ,,create \'{sub_name}\' first.')
         else:
@@ -160,6 +182,8 @@ class Subscription(commands.Cog):
         else:
             await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
         await ctx.send(message)
+
+
 
     def _initializeJson(self):
         json_file = self._loadJsonFile()
