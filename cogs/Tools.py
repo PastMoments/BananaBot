@@ -2,7 +2,6 @@ import random
 
 import discord
 from discord.ext import commands, tasks
-from google_images_search import GoogleImagesSearch
 
 import config
 
@@ -47,22 +46,8 @@ class Tools(commands.Cog):
     # TODO: test
     @commands.command()
     async def banana(self, ctx):
-        # initialize gis and search
-        search_params = {
-            'q': 'banana',
-            'num': 10,
-            'safe': 'medium',
-            'fileType': 'jpg|gif|png',
-        }
-        api_key, cx = self._loadgisinfo()
-        gis = GoogleImagesSearch(api_key, cx)
-        gis.search(search_params=search_params)
-
-        # choose a random picture
-        num = random.randint(0, len(gis.results()) - 1)
-        url = gis.results()[num].url()
         banana = discord.Embed()
-        banana.set_image(url=url)
+        banana.set_image(url='http://weknowyourdreams.com/images/banana/banana-02.jpg')
         await ctx.send(embed=banana)
 
     @commands.command()
