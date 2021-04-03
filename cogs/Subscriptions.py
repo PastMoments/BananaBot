@@ -130,6 +130,7 @@ class Subscription(commands.Cog):
                 message += f'    - {user.name}\n'
 
         if 'me' in args:
+            message += f"{ctx.author.name}, you are in:\n"
             for sub in sub_dict:
                 if str(ctx.author.id) in sub_dict[sub]:
                     message += f"    - {sub}\n"

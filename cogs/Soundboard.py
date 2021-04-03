@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from discord.utils import get
 import asyncio
-#import config
 import os
 import re
 
@@ -53,11 +51,12 @@ class SoundBoard(commands.Cog):
     """
     Takes in a space separated path to a sound and plays it.
     """
-    @commands.command(aliases=['sb', 'sound'])
+    @commands.command(aliases=['sb', 'sound'],
+                      help=",,sb path to sound")
     @commands.guild_only()
     async def soundboard(self, ctx, *args):
         path = '/'.join(args)
-        root = './cogs/Soundboard/'
+        root = './cogs/soundboard/'
         relpath = os.path.join(root, f'{path}.mp3')
         if not os.path.exists(relpath):
             await ctx.send("Couldn't find the sound.")
@@ -65,26 +64,47 @@ class SoundBoard(commands.Cog):
 
         voice = ctx.guild.voice_client
         author = ctx.author
-        channel = author.voice.channel
 
-        # Possibly change to have it stay after it plays a sound
         def leave(err):
-            asyncio.run_coroutine_threadsafe(voice.disconnect(),
-                                             self.client.loop)
-
-        if not os.path.isfile(relpath):
-            await ctx.send("Sorry, I couldn't find your sound.")
-            return
+            # asyncio.run_coroutine_threadsafe(voice.disconect(), self.client.loop)
+            pass
 
         if voice and voice.channel and not voice.is_playing():
-            voice.play(discord.FFmpegPCMAudio(relpath), after=leave)
+            voice.play(discord.FFmpegPCMAudio(relpath), after=None)
             voice.source = discord.PCMVolumeTransformer(voice.source)
             voice.source.volume = 1
         elif author.voice is not None and author.voice.channel is not None:
-            voice = await channel.connect()
-            voice.play(discord.FFmpegPCMAudio(relpath), after=leave)
+            voice = await author.voice.channel.connect(timeout=30, reconnect=True)
+            voice.play(discord.FFmpegPCMAudio(relpath), after=None)
             voice.source = discord.PCMVolumeTransformer(voice.source)
             voice.source.volume = 1
+
+        await self.timeoutleave(voice)
+
+    """
+    Waits timeout amount of seconds before leaving the voice channel
+    """
+    async def timeoutleave(self, voice, timeout=300):
+        if not voice:
+            return
+        while voice.is_playing():
+            await asyncio.sleep(1)
+        else:
+            await asyncio.sleep(timeout)
+            while voice.is_playing():
+                break
+            else:
+                await voice.disconnect()
+
+    @commands.command()
+    @commands.guild_only()
+    async def leave(self, ctx):
+        voice = ctx.guild.voice_client
+        if voice is None:
+            await ctx.send("I'm not in a channel!")
+            return
+        # maybe have it play a cute sound before leaving or something idk lol
+        await voice.disconnect()
 
 
 def setup(client):

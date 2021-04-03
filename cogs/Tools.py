@@ -2,6 +2,7 @@ import random
 
 import discord
 from discord.ext import commands, tasks
+from google_images_search import GoogleImagesSearch
 
 import config
 
@@ -36,12 +37,32 @@ class Tools(commands.Cog):
         if amount > 0:
             await ctx.channel.purge(limit=amount)
 
+    def _loadgisinfo(self):
+        with open('./gis') as file:
+            api_key = file.readline()
+            cx = file.readline()
+        return api_key, cx
+
     # Sends an image of a random banana
+    # TODO: test
     @commands.command()
     async def banana(self, ctx):
+        # initialize gis and search
+        search_params = {
+            'q': 'banana',
+            'num': 10,
+            'safe': 'medium',
+            'fileType': 'jpg|gif|png',
+        }
+        api_key, cx = self._loadgisinfo()
+        gis = GoogleImagesSearch(api_key, cx)
+        gis.search(search_params=search_params)
+
+        # choose a random picture
+        num = random.randint(0, len(gis.results()) - 1)
+        url = gis.results()[num].url()
         banana = discord.Embed()
-        banana.set_image(url='https://i.imgur.com/qFBwmoA.png')
-        # TODO: search google for an image
+        banana.set_image(url=url)
         await ctx.send(embed=banana)
 
     @commands.command()
