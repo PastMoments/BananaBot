@@ -16,7 +16,7 @@ class Subscription(commands.Cog):
         self._initializeJson()
         print('Subscriptions activated.')
 
-    @commands.command(aliases=['cSub'])
+    @commands.command(aliases=['mksu'])
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def createSubscription(self, ctx, sub_name):
@@ -36,9 +36,7 @@ class Subscription(commands.Cog):
         self._writeToJson(json_file)
         await ctx.send(f'Subscription  \'{sub_name}\' successfully created.')
 
-
-
-    @commands.command(aliases=['rSub'])
+    @commands.command(aliases=['rmsu'])
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def removeSubscription(self, ctx, sub_name):
@@ -57,39 +55,29 @@ class Subscription(commands.Cog):
         self._writeToJson(json_file)
         await ctx.send(f'Subscription  \'{sub_name}\' successfully removed.')
 
-    @commands.command()
+    """
+    Takes in a subscription name and subscribes the message sender to sub_name. If there are additional arguments,
+    then it instead subscribes all of the mentioned user in the message to sub_name
+    """
+    @commands.command(aliases=['sub'])
     @commands.guild_only()
-    async def subscribe(self, ctx, sub_name):
+    async def subscribe(self, ctx, sub_name, *args):
         json_file = self._loadJsonFile()
         server_id = str(ctx.guild.id)
-        if server_id in json_file:
-            sub_dict = json_file[server_id]
-            if sub_name in sub_dict:
-                sub_dict[sub_name].append(str(ctx.author.id))
-            else:
-                await ctx.send(f'Subscription \'{sub_name}\' does not exist, call ,,create \'{sub_name}\' first.')
-        else:
-            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
+        sub_dict = json_file[server_id]
+        if not self._sub_exists(server_id, sub_name):
+            await ctx.send(f"{sub_name} doesn't exist.")
+            return
 
-        self._writeToJson(json_file)
-        await ctx.send(f'Subscribed to \'{sub_name}\' successfully.')
+        if len(args) > 0:
+            if not ctx.author.guild_permissions.administrator:
+                await ctx.send("You must be an administrator to do this")
+                return
 
-    @commands.command()
-    @discord.ext.commands.has_permissions(administrator=True)
-    @commands.guild_only()
-    async def subscribe_user(self, ctx, sub_name, *args):
-        # TODO: test
-        json_file = self._loadJsonFile()
-        server_id = str(ctx.guild.id)
-        if server_id in json_file:
-            sub_dict = json_file[server_id]
-            if sub_name in sub_dict:
-                for user in ctx.message.mentions:
-                    sub_dict[sub_name].append(str(user.id))
-            else:
-                await ctx.send(f'Subscription \'{sub_name}\' does not exist, call ,,create \'{sub_name}\' first.')
+            for user in ctx.message.mentions:
+                sub_dict[sub_name].append(str(user.id))
         else:
-            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
+            sub_dict[sub_name].append(str(ctx.author.id))
 
         self._writeToJson(json_file)
         await ctx.send(f'Subscribed to \'{sub_name}\' successfully.')
@@ -111,21 +99,50 @@ class Subscription(commands.Cog):
         self._writeToJson(json_file)
         await ctx.send(f'Unsubscribed from \'{sub_name}\' successfully.')
 
-    @commands.command()
+    """
+    General command to list subscriptions. Formatting is as follows:
+    lsu <opts>
+    where opts is in 'all', 'subscribers', 'me' and may be input in any order.
+    If 'subscribers' is in args, then the succeeding argument must be a sub name.
+    """
+    @commands.command(aliases=['lsu'])
     @commands.guild_only()
-    async def listSubscriptions(self, ctx):
+    async def listSubscriptions(self, ctx, *args):
         json_file = self._loadJsonFile()
         server_id = str(ctx.guild.id)
         if server_id not in json_file:
+            await ctx.send("There are no subscriptions for this server.")
             return
+
         sub_dict = json_file[server_id]
-        message = f"{ctx.guild.name} subscriptions:\n"
-        for sub_name in sub_dict.keys():
-            message += f'    - {sub_name}\n'
+        message = ''
+        if 'subscribers' in args:
+            index = args.index('subscribers')
+            sub_name = args[index + 1]
+            if not self._sub_exists(server_id, sub_name):
+                await ctx.send(f'Subscription \'{sub_name}\' does not exist.')
+                return
+
+            user_ids = sub_dict[sub_name]
+            users = [await ctx.guild.fetch_member(i) for i in user_ids]
+            message = f"{sub_name} members:\n"
+            for user in users:
+                message += f'    - {user.name}\n'
+
+        if 'me' in args:
+            for sub in sub_dict:
+                if str(ctx.author.id) in sub_dict[sub]:
+                    message += f"    - {sub}\n"
+
+        if 'all' in args or len(args) == 0:
+            message += f"all {ctx.guild.name} subscriptions:\n"
+            for sub_name in sub_dict.keys():
+                message += f'    - {sub_name}\n'
 
         await ctx.send(message)
 
-    @commands.command()
+
+    @commands.command(aliases=['atsub'])
     @commands.guild_only()
     async def atSubscriptions(self, ctx, sub_name):
         json_file = self._loadJsonFile()
@@ -146,45 +163,6 @@ class Subscription(commands.Cog):
         else:
             await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
 
-    @commands.command()
-    @commands.guild_only()
-    async def listSubscribers(self, ctx, sub_name):
-        json_file = self._loadJsonFile()
-        server_id = str(ctx.guild.id)
-
-        if server_id in json_file:
-            sub_dict = json_file[server_id]
-            if sub_name in sub_dict:
-                user_ids = sub_dict[sub_name]
-                users = [await ctx.guild.fetch_member(i) for i in user_ids]
-
-                message = f"{sub_name} members:\n"
-                for user in users:
-                    message += f'    - {user.name}\n'
-                await ctx.send(message)
-            else:
-                await ctx.send(f'Subscription \'{sub_name}\' does not exist.')
-        else:
-            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
-
-    @commands.command()
-    @commands.guild_only()
-    async def listSubscribed(self, ctx):
-        json_file = self._loadJsonFile()
-        server_id = str(ctx.guild.id)
-        message = "Subscribed:\n"
-
-        if server_id in json_file:
-            sub_dict = json_file[server_id]
-            for sub in sub_dict:
-                if str(ctx.author.id) in sub_dict[sub]:
-                    message += f"    - {sub}\n"
-        else:
-            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
-        await ctx.send(message)
-
-
-
     def _initializeJson(self):
         json_file = self._loadJsonFile()
         for server in self.client.guilds:
@@ -204,6 +182,11 @@ class Subscription(commands.Cog):
         file = open("./cogs/subscription/subscriptions.json", mode='w')
         json.dump(json_file, file, indent=4)
         file.close()
+
+    def _sub_exists(self, server_id, sub_name):
+        json_file = self._loadJsonFile()
+        server_id = str(server_id) # redundancy just in case
+        return server_id in json_file and sub_name in json_file[server_id]
 
 def setup(client):
     client.add_cog(Subscription(client))

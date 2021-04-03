@@ -1,9 +1,14 @@
+#!/usr/bin/python
+
 import os
 
 import discord
 from discord.ext import commands
 
 import config
+
+with open('./token') as token_file:
+    token = token_file.readline()
 
 client = commands.Bot(command_prefix=config.PREFIX)
 
@@ -40,5 +45,5 @@ async def reload(ctx, extension):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     loadCogs()
-    client.run(config.token)
+    client.run(token)
 

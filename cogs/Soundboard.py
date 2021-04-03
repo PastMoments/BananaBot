@@ -16,24 +16,22 @@ class SoundBoard(commands.Cog):
     async def on_ready(self):
         print('SoundBoard activated.')
 
-
-    @commands.command()
+    @commands.command(aliases=['lsb'])
     @commands.guild_only()
     async def listSounds(self, ctx, *args):
         # this gives a wonky path if args is like "path/to/directory" rather than "path to directory", need check
         path = '/'.join(args)
-        msg = self.rlistSounds(path)
+        msg = self._rlistSounds(path)
         if msg is None:
             await ctx.send("Sorry, I couldn't find your path")
             return
         await ctx.send(msg)
 
-
     """
     Given a path relative to ./cogs/soundboard/, return a formatted message displaying all subdirectories and files
     recursively
     """
-    def rlistSounds(self, path, depth=0):
+    def _rlistSounds(self, path, depth=0):
         root = './cogs/soundboard/'
         rel = os.path.join(root, path)
         if not os.path.exists(rel):
@@ -43,7 +41,7 @@ class SoundBoard(commands.Cog):
             rel_item_path = os.path.join(rel, item)
             if os.path.isdir(rel_item_path):
                 msg += f"{'  ' * depth}/{item}\n"
-                msg += self.rlistSounds(os.path.join(path, item), depth=depth+1)
+                msg += self._rlistSounds(os.path.join(path, item), depth=depth + 1)
             else:
                 regex = '([^.]*).[^.]*'
                 basename = os.path.basename(rel_item_path)
@@ -52,6 +50,9 @@ class SoundBoard(commands.Cog):
                     msg += f"{'  ' * depth}-{match.group(1)}\n"
         return msg
 
+    """
+    Takes in a space separated path to a sound and plays it.
+    """
     @commands.command(aliases=['sb', 'sound'])
     @commands.guild_only()
     async def soundboard(self, ctx, *args):
