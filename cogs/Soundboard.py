@@ -9,12 +9,16 @@ class SoundBoard(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.description = "A soundboard"
 
     @commands.Cog.listener()
     async def on_ready(self):
         print('SoundBoard activated.')
 
-    @commands.command(aliases=['lsb'])
+    @commands.command(aliases=['lsb'],
+                      brief="Lists sounds",
+                      description="List sounds",
+                      usage=",,lsb PATH")
     @commands.guild_only()
     async def listSounds(self, ctx, *args):
         # this gives a wonky path if args is like "path/to/directory" rather than "path to directory", need check
@@ -52,7 +56,9 @@ class SoundBoard(commands.Cog):
     Takes in a space separated path to a sound and plays it.
     """
     @commands.command(aliases=['sb', 'sound'],
-                      help=",,sb path to sound")
+                      brief="Plays a sound",
+                      help="Plays a sound",
+                      usage=",,sb path to sound")
     @commands.guild_only()
     async def soundboard(self, ctx, *args):
         path = '/'.join(args)
@@ -66,7 +72,7 @@ class SoundBoard(commands.Cog):
         author = ctx.author
 
         def leave(err):
-            # asyncio.run_coroutine_threadsafe(voice.disconect(), self.client.loop)
+            # asyncio.run_coroutine_threadsafe(voice.disconnect(), self.client.loop)
             pass
 
         if voice and voice.channel and not voice.is_playing():
@@ -96,7 +102,9 @@ class SoundBoard(commands.Cog):
             else:
                 await voice.disconnect()
 
-    @commands.command()
+    @commands.command(brief="Makes Banana disconnect from the channel",
+                      description="Makes Banana disconnect from the channel",
+                      usage=",,leave")
     @commands.guild_only()
     async def leave(self, ctx):
         voice = ctx.guild.voice_client

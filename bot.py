@@ -4,13 +4,14 @@ import os
 
 import discord
 from discord.ext import commands
+from pretty_help import PrettyHelp
 
 import config
 
 with open('./token') as token_file:
     token = token_file.readline()
 
-client = commands.Bot(command_prefix=config.PREFIX)
+client = commands.Bot(command_prefix=config.PREFIX, help_command=PrettyHelp())
 
 
 # Gives debug feedback that the bot has successfully launched.
@@ -34,6 +35,7 @@ def loadCogs():
 
 
 @client.command(aliases=['rel', 'rl'], hidden=True)
+@commands.check(lambda ctx: ctx.message.author.id == 166989171456606208)
 async def reload(ctx, extension):
     try:
         client.unload_extension(f'cogs.{extension}')
