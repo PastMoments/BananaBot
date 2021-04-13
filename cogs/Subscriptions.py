@@ -84,8 +84,11 @@ class Subscription(commands.Cog):
 
             await ctx.send(f"Subscribed {len(ctx.message.mentions)} users to {sub_name}")
         else:
-            sub_dict[sub_name].append(str(ctx.author.id))
-            await ctx.send(f'Subscribed to \'{sub_name}\' successfully')
+            if str(ctx.author.id) in sub_dict[sub_name]:
+                await ctx.send(f'You\'ve already subscribed to \'{sub_name}\'!')
+            else:
+                sub_dict[sub_name].append(str(ctx.author.id))
+                await ctx.send(f'Subscribed to \'{sub_name}\' successfully')
 
         self._writeToJson(json_file)
 
