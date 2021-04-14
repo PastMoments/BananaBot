@@ -4,6 +4,8 @@ import asyncio
 import os
 import re
 
+from config import PREFIX
+
 # TODO: test
 class SoundBoard(commands.Cog):
 
@@ -18,7 +20,7 @@ class SoundBoard(commands.Cog):
     @commands.command(aliases=['lsb'],
                       brief="Lists sounds",
                       description="List sounds",
-                      usage=",,lsb PATH")
+                      usage=f"{PREFIX}lsb PATH")
     @commands.guild_only()
     async def listSounds(self, ctx, *args):
         # this gives a wonky path if args is like "path/to/directory" rather than "path to directory", need check
@@ -58,7 +60,7 @@ class SoundBoard(commands.Cog):
     @commands.command(aliases=['sb', 'sound'],
                       brief="Plays a sound",
                       help="Plays a sound",
-                      usage=",,sb path to sound")
+                      usage=f"{PREFIX}sb path to sound")
     @commands.guild_only()
     async def soundboard(self, ctx, *args):
         path = '/'.join(args)
@@ -104,7 +106,7 @@ class SoundBoard(commands.Cog):
 
     @commands.command(brief="Makes Banana disconnect from the channel",
                       description="Makes Banana disconnect from the channel",
-                      usage=",,leave")
+                      usage=f"{PREFIX}leave")
     @commands.guild_only()
     async def leave(self, ctx):
         voice = ctx.guild.voice_client

@@ -1,6 +1,6 @@
 from itertools import cycle
 
-PREFIX = ",,"
+PREFIX = "~"
 
 bot_statuses = cycle([
         'A healthy source of vitamin C.',

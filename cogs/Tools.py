@@ -2,8 +2,10 @@ import random
 
 import discord
 from discord.ext import commands, tasks
+from discord.utils import get
 
 import config
+from config import PREFIX
 
 
 class Tools(commands.Cog):
@@ -32,25 +34,16 @@ class Tools(commands.Cog):
     @magic_conch.error
     async def magic_conch_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send('Incorrect usage.\n'
-                           'Correct usage: ",,mc <yes/no question>"')
+            await ctx.send('Usage: ",,mc <yes/no question>"')
 
     @commands.command(brief="Clear recent message",
                       description="Clear recent messages",
-                      usage=",,clear NUM")
+                      usage=f"{PREFIX}clear NUM")
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, amount=5):
         if amount > 0:
             await ctx.channel.purge(limit=amount)
 
-    def _loadgisinfo(self):
-        with open('./gis') as file:
-            api_key = file.readline()
-            cx = file.readline()
-        return api_key, cx
-
-    # Sends an image of a random banana
-    # TODO: test
     @commands.command(brief="Sends a picture of a banana",
                       description="Sends a picture of a banana")
     async def banana(self, ctx):
@@ -61,13 +54,13 @@ class Tools(commands.Cog):
     @commands.command(aliases=['dice'],
                       brief="Roll a dice",
                       description="Roll a dice",
-                      usage=",,roll NUM")
+                      usage=f"{PREFIX}roll NUM")
     async def roll(self, ctx, lower=1, upper=6):
         await ctx.send(random.randint(int(lower), int(upper)))
 
     @tasks.loop(seconds=20)
     async def random_status(self):
-        status = f'{next(config.bot_statuses)} | ,,help'
+        status = f'{next(config.bot_statuses)} | {PREFIX}help'
         await self.client.change_presence(activity=discord.Game(status))
 
 

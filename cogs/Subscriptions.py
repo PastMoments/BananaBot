@@ -1,8 +1,7 @@
 import discord
-from discord.ext import commands, tasks
-from itertools import cycle
-import random
-import config
+from discord.ext import commands
+
+from config import PREFIX
 import json
 
 
@@ -20,7 +19,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['mksub'],
                       brief="Makes a subscription",
                       description="Makes a subscription",
-                      usage=",,mksub SUBSCRIPTION")
+                      usage=f"{PREFIX}mksub SUBSCRIPTION")
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def makesub(self, ctx, sub_name):
@@ -42,7 +41,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['rmsub'],
                       brief="Removes a subscription",
                       description="Removes a subscription",
-                      usage=",,rmsub SUBSCRIPTION")
+                      usage=f"{PREFIX}rmsub SUBSCRIPTION")
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def removesub(self, ctx, sub_name):
@@ -64,7 +63,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['sub'],
                       brief="Subscribe",
                       description="Subscribe",
-                      usage=",,sub SUBSCRIPTION [USERS]")
+                      usage=f"{PREFIX}sub SUBSCRIPTION [USERS]")
     @commands.guild_only()
     async def subscribe(self, ctx, sub_name, *args):
         json_file = self._loadJsonFile()
@@ -95,7 +94,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['unsub'],
                       brief="Unsubscribe",
                       description="Unsubscribe",
-                      usage=",,unsub SUBSCRIPTION [USERS]")
+                      usage=f"{PREFIX}unsub SUBSCRIPTION [USERS]")
     @commands.guild_only()
     async def unsubscribe(self, ctx, sub_name, *args):
         json_file = self._loadJsonFile()
@@ -140,7 +139,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['lsu'],
                       brief="List subscriptions",
                       description="List subscriptions",
-                      usage=",,lsu all|subscribers|me")
+                      usage=f"{PREFIX}lsu all|subscribers|me")
     @commands.guild_only()
     async def listsubs(self, ctx, *args):
         json_file = self._loadJsonFile()
@@ -179,7 +178,8 @@ class Subscription(commands.Cog):
 
     @commands.command(brief="@'s users of a sub",
                       description="@'s users of a sub",
-                      usage=",,atsub SUBSCRIPTION")
+                      usage=f"{PREFIX}@ SUBSCRIPTION",
+                      aliases=['@', 'at', 'a'])
     @commands.guild_only()
     async def atsub(self, ctx, sub_name):
         json_file = self._loadJsonFile()
@@ -198,7 +198,7 @@ class Subscription(commands.Cog):
             else:
                 await ctx.send(f'Subscription \'{sub_name}\' does not exist.')
         else:
-            await ctx.send(f'Subscriptions not initialized, call ,,create <subscription name>.')
+            await ctx.send(f'Subscriptions not initialized, call {PREFIX}create <subscription name>.')
 
     def _initializeJson(self):
         json_file = self._loadJsonFile()
@@ -222,7 +222,7 @@ class Subscription(commands.Cog):
 
     def _sub_exists(self, server_id, sub_name):
         json_file = self._loadJsonFile()
-        server_id = str(server_id) # redundancy just in case
+        server_id = str(server_id)
         return server_id in json_file and sub_name in json_file[server_id]
 
 def setup(client):
