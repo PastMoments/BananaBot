@@ -25,6 +25,7 @@ class Subscription(commands.Cog):
     async def makesub(self, ctx, sub_name):
         sub_data = self._load_sub_data()
         server_id = str(ctx.guild.id)
+
         if server_id in sub_data:
             sub_dict = sub_data[server_id]
             if self._match_sub(sub_dict, sub_name) is not None:
@@ -66,6 +67,9 @@ class Subscription(commands.Cog):
                       usage=f"{PREFIX}sub SUBSCRIPTION [USERS]")
     @commands.guild_only()
     async def subscribe(self, ctx, sub_name, *args):
+        if len(sub_name) <= MIN_MATCH:
+            await ctx.send(f"This name is too short! Please make this name at least {MIN_MATCH} characters long.")
+            return
         json_file = self._load_sub_data()
         server_id = str(ctx.guild.id)
         if not self._sub_exists(server_id, sub_name, match_exact=True):
@@ -194,16 +198,28 @@ class Subscription(commands.Cog):
             return
 
         server_subs = sub_data.get(server_id)
-        user_ids = self._match_sub(server_subs, sub_name)
+        matched_server_subs = self._match_sub(server_subs, sub_name)
+
+        # Multiple matches? We already guaranteed at least 1 match in the _sub_exists call
+        if len(matched_server_subs) > 1:
+            message = "There were multiple subscriptions that matched your query:\n"
+            for sub in matched_server_subs.keys():
+                message += f"    - {sub}\n"
+            message += f"Try sending a more specific query"
+            await ctx.send(message)
+            return
+
+        matched_sub_name = list(matched_server_subs.keys())[0]
+        user_ids = matched_server_subs[matched_sub_name]
 
         if not user_ids:
             await ctx.send(f"There are no users in {sub_name}, you can sub to it with {PREFIX}sub {sub_name}`!")
             return
 
         users = [await ctx.guild.fetch_member(user_id) for user_id in user_ids]
-        embed = discord.Embed(title=f"**Calling all {sub_name} members!**",
-                              description=f"If you don't want to be mentioned in this, call `{PREFIX}unsub {sub_name}`."
-                                          f"\nNote that unsub is case sensitive!", color=0xffff00)
+        embed = discord.Embed(title=f"**Calling all {matched_sub_name} members!**",
+                              description=f"If you don't want to be mentioned in this, call `{PREFIX}unsub "
+                                          f"{matched_sub_name}`. \nNote that unsub is case sensitive!", color=0xffff00)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         message = "||"
         for user in users:
@@ -213,17 +229,22 @@ class Subscription(commands.Cog):
 
 
     """
-    Given a dictionary of sub names to lists of users, match parameter sub_name and return the corresponding list, and
-    None if no match was found
+    Given a dictionary of sub names to lists of users, match parameter sub_name and return the entries in the
+    dictionary that match or None if none was found
     """
     def _match_sub(self, subs, sub_search):
+        matched = {}
         sub_search = sub_search.lower()
         for sub, users in subs.items():
-            sub = sub.lower()
+            sub_lower = sub.lower()
             match_length = max(MIN_MATCH, len(sub_search))
-            if sub[:match_length] == sub_search:
-                return users
-        return None
+            if sub_lower[:match_length] == sub_search:
+                matched[sub] = users
+                if sub_lower == sub_search:
+                    return matched
+        if len(matched) == 0:
+            return None
+        return matched
 
     def _initialize_sub_data(self):
         json_file = self._load_sub_data()
