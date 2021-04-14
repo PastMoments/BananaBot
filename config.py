@@ -2,6 +2,9 @@ from itertools import cycle
 
 PREFIX = "~"
 
+# The minimum number of characters to match a subscription
+MIN_MATCH = 3
+
 bot_statuses = cycle([
         'A healthy source of vitamin C.',
         'Remember to eat your daily banana!',
