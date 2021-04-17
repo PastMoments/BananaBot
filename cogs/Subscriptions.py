@@ -73,7 +73,8 @@ class Subscription(commands.Cog):
         json_file = self._load_sub_data()
         server_id = str(ctx.guild.id)
         if not self._sub_exists(server_id, sub_name, match_exact=True):
-            await ctx.send(f"{sub_name} doesn't exist. Note this command is case sensitive!")
+            await ctx.send(f"{sub_name} doesn't exist. You can check the subscriptions using `{PREFIX}lsub all`. "
+                           f"Note this command is case sensitive!")
             return
 
         sub_dict = json_file[server_id]
@@ -140,7 +141,7 @@ class Subscription(commands.Cog):
     where opts is in 'all', 'subscribers', 'me' and may be input in any order.
     If 'subscribers' is in args, then the succeeding argument must be a sub name.
     """
-    @commands.command(aliases=['lsu'],
+    @commands.command(aliases=['lsub'],
                       brief="List subscriptions",
                       description="List subscriptions",
                       usage=f"{PREFIX}lsu all|subscribers|me")
@@ -178,7 +179,7 @@ class Subscription(commands.Cog):
                 message += f"No subs!\nCall `{PREFIX}sub sub_name` to subscribe.\n"
 
         if 'all' in args or len(args) == 0:
-            message += f"all {ctx.guild.name} subscriptions:\n"
+            message += f"All {ctx.guild.name} subscriptions:\n"
             for sub_name in sub_dict.keys():
                 message += f'    - {sub_name}\n'
 
@@ -213,7 +214,8 @@ class Subscription(commands.Cog):
         user_ids = matched_server_subs[matched_sub_name]
 
         if not user_ids:
-            await ctx.send(f"There are no users in {sub_name}, you can sub to it with {PREFIX}sub {sub_name}`!")
+            await ctx.send(f"There are no users in {matched_sub_name}, you can sub to it with "
+                           f"`{PREFIX}sub {matched_sub_name}`!")
             return
 
         users = [await ctx.guild.fetch_member(user_id) for user_id in user_ids]
