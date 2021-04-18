@@ -144,7 +144,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['lsub'],
                       brief="List subscriptions",
                       description="List subscriptions",
-                      usage=f"{PREFIX}lsu all|subscribers|me")
+                      usage=f"{PREFIX}lsub all|subscribers|me")
     @commands.guild_only()
     async def listsubs(self, ctx, *args):
         json_file = self._load_sub_data()
@@ -162,7 +162,7 @@ class Subscription(commands.Cog):
                 await ctx.send(f'Subscription \'{sub_name}\' does not exist. Note this command is case sensitive!')
                 return
 
-            user_ids = self._match_sub(sub_dict, sub_name)
+            user_ids = sub_dict[sub_name]
             users = [await ctx.guild.fetch_member(i) for i in user_ids]
             message = f"{sub_name} members:\n"
             for user in users:
