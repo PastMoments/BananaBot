@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import discord
 from discord.ext import commands
 
@@ -16,10 +17,65 @@ class Subscription(commands.Cog):
         self._initialize_sub_data()
         print('Subscriptions activated.')
 
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        message = reaction.message
+        if user == self.client.user or message.author != self.client.user:
+            return
+        # Check if the message sent is an atsub message
+        if 'Calling all' in message.embeds[0].title:
+            embed = message.embeds[0]
+            # Find the correct field to edit
+            index = 0
+            for i, field in enumerate(embed.fields):
+                if field.name == "Going":
+                    index = i
+                    break
+            going_field = embed.fields[index]
+            user_name = user.display_name
+            if reaction.emoji == "✅":
+                # If user is already going, don't add again
+                going_field_value_split = going_field.value.split(', ')
+                if user_name in going_field_value_split:
+                    return
+                going_field_value_split.append(user_name)
+                embed.set_field_at(index, name=going_field.name, value=', '.join(going_field_value_split))
+                await message.edit(embed=embed)
+            elif reaction.emoji == "❌":
+                pass
+
+    @commands.Cog.listener()
+    async def on_reaction_remove(self, reaction, user):
+        message = reaction.message
+        if user == self.client.user or message.author != self.client.user:
+            return
+        # Check if the message sent is an atsub message
+        if 'Calling all' in message.embeds[0].title:
+            embed = message.embeds[0]
+            # Find the correct field to edit
+            index = 0
+            for i, field in enumerate(embed.fields):
+                if field.name == "Going":
+                    index = i
+                    break
+            going_field = embed.fields[index]
+            user_name = user.display_name
+            if reaction.emoji == "✅":
+                # Remove user from going
+                going_field_value_split = going_field.value.split(', ')
+                # Don't remove base author name
+                if user_name in going_field_value_split and user_name != embed.author:
+                    going_field_value_split.remove(user_name)
+                embed.set_field_at(index, name=going_field.name, value=', '.join(going_field_value_split))
+                await message.edit(embed=embed)
+            elif reaction.emoji == "❌":
+                pass
+
+
     @commands.command(aliases=['mksub'],
                       brief="Makes a subscription",
                       description="Makes a subscription",
-                      usage=f"{PREFIX}mksub SUBSCRIPTION")
+                      usage=f"SUBSCRIPTION")
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def makesub(self, ctx, sub_name):
@@ -42,7 +98,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['rmsub'],
                       brief="Removes a subscription",
                       description="Removes a subscription",
-                      usage=f"{PREFIX}rmsub SUBSCRIPTION")
+                      usage=f"SUBSCRIPTION")
     @discord.ext.commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def removesub(self, ctx, sub_name):
@@ -64,7 +120,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['sub'],
                       brief="Subscribe",
                       description="Subscribe",
-                      usage=f"{PREFIX}sub SUBSCRIPTION [USERS]")
+                      usage=f"SUBSCRIPTION")
     @commands.guild_only()
     async def subscribe(self, ctx, sub_name, *args):
         if len(sub_name) <= MIN_MATCH:
@@ -99,7 +155,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['unsub'],
                       brief="Unsubscribe",
                       description="Unsubscribe",
-                      usage=f"{PREFIX}unsub SUBSCRIPTION [USERS]")
+                      usage=f"SUBSCRIPTION")
     @commands.guild_only()
     async def unsubscribe(self, ctx, sub_name, *args):
         json_file = self._load_sub_data()
@@ -144,7 +200,7 @@ class Subscription(commands.Cog):
     @commands.command(aliases=['lsub'],
                       brief="List subscriptions",
                       description="List subscriptions",
-                      usage=f"{PREFIX}lsub all|subscribers|me")
+                      usage=f"all|subscribers|me")
     @commands.guild_only()
     async def listsubs(self, ctx, *args):
         json_file = self._load_sub_data()
@@ -187,47 +243,52 @@ class Subscription(commands.Cog):
 
     @commands.command(brief="@'s users of a sub",
                       description="@'s users of a sub",
-                      usage=f"{PREFIX}@ SUBSCRIPTION",
+                      usage=f"SUBSCRIPTION",
                       aliases=['@', 'at', 'a'])
     @commands.guild_only()
     async def atsub(self, ctx, sub_name):
-        sub_data = self._load_sub_data()
-        server_id = str(ctx.guild.id)
+        async with ctx.typing():
+            sub_data = self._load_sub_data()
+            server_id = str(ctx.guild.id)
 
-        if not self._sub_exists(server_id, sub_name, match_exact=False):
-            await ctx.send(f"{sub_name} doesn't exist, call `{PREFIX}mksub {sub_name}`")
-            return
+            if not self._sub_exists(server_id, sub_name, match_exact=False):
+                await ctx.send(f"{sub_name} doesn't exist, call `{PREFIX}mksub {sub_name}`")
+                return
 
-        server_subs = sub_data.get(server_id)
-        matched_server_subs = self._match_sub(server_subs, sub_name)
+            server_subs = sub_data.get(server_id)
+            matched_server_subs = self._match_sub(server_subs, sub_name)
 
-        # Multiple matches? We already guaranteed at least 1 match in the _sub_exists call
-        if len(matched_server_subs) > 1:
-            message = "There were multiple subscriptions that matched your query:\n"
-            for sub in matched_server_subs.keys():
-                message += f"    - {sub}\n"
-            message += f"Try sending a more specific query"
-            await ctx.send(message)
-            return
+            # Multiple matches? We already guaranteed at least 1 match in the _sub_exists call
+            if len(matched_server_subs) > 1:
+                message_text = "There were multiple subscriptions that matched your query:\n"
+                for sub in matched_server_subs.keys():
+                    message_text += f"    - {sub}\n"
+                message_text += f"Try sending a more specific query"
+                await ctx.send(message_text)
+                return
 
-        matched_sub_name = list(matched_server_subs.keys())[0]
-        user_ids = matched_server_subs[matched_sub_name]
+            matched_sub_name = list(matched_server_subs.keys())[0]
+            user_ids = matched_server_subs[matched_sub_name]
 
-        if not user_ids:
-            await ctx.send(f"There are no users in {matched_sub_name}, you can sub to it with "
-                           f"`{PREFIX}sub {matched_sub_name}`!")
-            return
+            if not user_ids:
+                await ctx.send(f"There are no users in {matched_sub_name}, you can sub to it with "
+                               f"`{PREFIX}sub {matched_sub_name}`!")
+                return
 
-        users = [await ctx.guild.fetch_member(user_id) for user_id in user_ids]
-        embed = discord.Embed(title=f"**Calling all {matched_sub_name} members!**",
-                              description=f"If you don't want to be mentioned in this, call `{PREFIX}unsub "
-                                          f"{matched_sub_name}`. \nNote that unsub is case sensitive!", color=0xffff00)
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
-        message = "||"
-        for user in users:
-            message += f"{user.mention}"
-        message += "||"
-        await ctx.send(message, embed=embed)
+            users = [await ctx.guild.fetch_member(user_id) for user_id in user_ids]
+            embed = discord.Embed(title=f"**Calling all {matched_sub_name} members!**",
+                                  description=f"If you don't want to be mentioned in this, call `{PREFIX}unsub "
+                                              f"{matched_sub_name}`. \nNote that unsub is case sensitive!",
+                                  color=0xffff00)
+            embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+            embed.add_field(name="Going", value=ctx.author.display_name)
+            message_text = "||"
+            for user in users:
+                message_text += f"{user.mention}"
+            message_text += "||"
+            message = await ctx.send(message_text, embed=embed)
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
 
 
     """

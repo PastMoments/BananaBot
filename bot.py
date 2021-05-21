@@ -11,7 +11,10 @@ import config
 with open('./token') as token_file:
     token = token_file.readline()
 
-client = commands.Bot(command_prefix=config.PREFIX, help_command=PrettyHelp())
+intents = discord.Intents.default()
+intents.members = True
+intents.reactions = True
+client = commands.Bot(command_prefix=config.PREFIX, help_command=PrettyHelp(), intents=intents)
 
 
 # Gives debug feedback that the bot has successfully launched.
