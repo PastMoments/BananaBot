@@ -2,8 +2,72 @@
 import discord
 from discord.ext import commands
 
-from config import PREFIX, MIN_MATCH
 import json
+from typing import *
+
+from Utilities import retrieve_embed_field_index
+from config import PREFIX, MIN_MATCH
+
+ATTENDING_STRING = "Attending"
+NOT_ATTENDING_STRING = "Not attending"
+DELIMITER = ", "
+
+def add_user_to_embed_field(embed: discord.Embed, field: str, user: discord.User, options: Optional[Dict] = None) \
+        -> bool:
+    """
+    Adds user to an embed field for a Banana atsub message. Returns True iff successful.
+    Precondition: The desired field has value of the form "User1{DELIMITER}User2, ..."
+    :param embed: discord.Embed
+    :param field: str
+    :param user: discord.User
+    :param options: Dict
+    :return: bool
+    """
+    # Currently no use of options in this function, but I imagine there might be uses in the future
+    if not options:
+        options = {}
+    user_name = user.display_name
+    index = retrieve_embed_field_index(field, embed)
+    if index == -1:
+        return False
+    going_field = embed.fields[index]
+    going_field_value_array = going_field.value.split(DELIMITER)
+    if user_name in going_field_value_array:
+        return False
+    going_field_value_array.append(user_name)
+    going_field_value_formatted = DELIMITER.join(going_field_value_array)
+    embed.set_field_at(index=index, name=field, value=going_field_value_formatted)
+    return True
+
+
+def remove_user_from_embed_field(embed: discord.Embed, field: str, user: discord.User, options: Optional[Dict] = None):
+    """
+    Removes a user to an embed field for a Banana atsub message. Returns True iff successful.
+    Precondition: The desired field has value of the form "User1{DELIMITER}User2, ..."
+    :param embed: discord.Embed
+    :param field: str
+    :param user: discord.User
+    :param options: Dict
+    :return: bool
+    """
+    if not options:
+        options = {}
+    ignores = options.pop('ignores', [])
+    user_name = user.display_name
+    if user_name in ignores:
+        return False
+    index = retrieve_embed_field_index(field, embed)
+    if index == -1:
+        return False
+    going_field = embed.fields[index]
+    user_name = user.display_name
+    going_field_value_array = going_field.value.split(DELIMITER)
+    if user_name not in going_field_value_array:
+        return False
+    going_field_value_array.remove(user_name)
+    going_field_value_formatted = DELIMITER.join(going_field_value_array)
+    embed.set_field_at(index=index, name=field, value=going_field_value_formatted)
+    return True
 
 
 class Subscription(commands.Cog):
@@ -18,59 +82,35 @@ class Subscription(commands.Cog):
         print('Subscriptions activated.')
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
         message = reaction.message
+        # Check it's not Banana reacting
         if user == self.client.user or message.author != self.client.user:
             return
         # Check if the message sent is an atsub message
         if 'Calling all' in message.embeds[0].title:
             embed = message.embeds[0]
-            # Find the correct field to edit
-            index = 0
-            for i, field in enumerate(embed.fields):
-                if field.name == "Going":
-                    index = i
-                    break
-            going_field = embed.fields[index]
-            user_name = user.display_name
             if reaction.emoji == "✅":
-                # If user is already going, don't add again
-                going_field_value_split = going_field.value.split(', ')
-                if user_name in going_field_value_split:
-                    return
-                going_field_value_split.append(user_name)
-                embed.set_field_at(index, name=going_field.name, value=', '.join(going_field_value_split))
-                await message.edit(embed=embed)
+                # Nesting the if for code clarity in case future handlers continue the if block
+                if add_user_to_embed_field(embed, ATTENDING_STRING, user):
+                    await message.edit(embed=embed)
             elif reaction.emoji == "❌":
                 pass
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, reaction, user):
         message = reaction.message
+        # Check it's not Banana reacting
         if user == self.client.user or message.author != self.client.user:
             return
         # Check if the message sent is an atsub message
         if 'Calling all' in message.embeds[0].title:
             embed = message.embeds[0]
-            # Find the correct field to edit
-            index = 0
-            for i, field in enumerate(embed.fields):
-                if field.name == "Going":
-                    index = i
-                    break
-            going_field = embed.fields[index]
-            user_name = user.display_name
             if reaction.emoji == "✅":
-                # Remove user from going
-                going_field_value_split = going_field.value.split(', ')
-                # Don't remove base author name
-                if user_name in going_field_value_split and user_name != embed.author:
-                    going_field_value_split.remove(user_name)
-                embed.set_field_at(index, name=going_field.name, value=', '.join(going_field_value_split))
-                await message.edit(embed=embed)
+                if remove_user_from_embed_field(embed, ATTENDING_STRING, user, options={'ignores': [embed.author]}):
+                    await message.edit(embed=embed)
             elif reaction.emoji == "❌":
                 pass
-
 
     @commands.command(aliases=['mksub'],
                       brief="Makes a subscription",
@@ -281,7 +321,7 @@ class Subscription(commands.Cog):
                                               f"{matched_sub_name}`. \nNote that unsub is case sensitive!",
                                   color=0xffff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
-            embed.add_field(name="Going", value=ctx.author.display_name)
+            embed.add_field(name=ATTENDING_STRING, value=ctx.author.display_name)
             message_text = "||"
             for user in users:
                 message_text += f"{user.mention}"
